@@ -1,36 +1,62 @@
-var array = [];
+import { connection } from "../db/connection.js";
 
-const create = (company) => {
-    array.push(company);
+const create = async (company, entityId) => {
+    const db = await connection.clientDB();
+    const query = "INSERT INTO companies (nit, addressee_name, entity_id) VALUES(?, ?, ?)";
+    const [result] = await db.query(query, [company.nit, company.addresseeName, entityId]);
+    db.release();
+
+    return result.insertId;
 }
 
-const read = (userId) => {
-    return array.filter(company => company.user.userId === userId);
+const read = async (userId) => {
+    const db = await connection.clientDB();
+    const query = `
+        SELECT
+            e.*,
+            c.nit,
+            c.addressee_name
+        FROM companies c
+        JOIN entities e ON c.entity_id = e.id
+        WHERE e.user_id = ?
+    `;
+    const [rows] = await db.query(query, [userId]);
+    db.release();
+
+    return rows;
 }
 
-const searchById = (id) => {
-    const company = array.find(company => company.companyId === id);
+const searchById = async (companyId, userId) => {
+    const db = await connection.clientDB();
+    const query = `
+        SELECT
+            c.id,
+            e.entity_id,
+            e.name,
+            e.email,
+            e.phone,
+            e.user_id,
+            et.type,
+            c.nit,
+            c.addressee_name
+        FROM companies c
+        JOIN entities e ON c.entity_id = e.id
+        JOIN entities_types et ON e.entity_type_id = et.id
+        WHERE e.entity_id = ?
+        AND
+        e.user_id = ?
+    `;
+    const [rows] = await db.query(query, [companyId, userId]);
+    db.release();
 
-    return company ? company : null;
+    return rows[0] || null;
 }
 
-const edit = (company) => {
-    const index = array.findIndex(currentCompany => currentCompany.companyId === company.companyId);
-
-    if(index != -1) {
-        array[index] = company;
-        return array[index];
-    } else {
-        return null;
-    }
+const edit = async (company) => {
+    const db = await connection.clientDB();
+    const query = "UPDATE companies SET nit = ?, addressee_name = ? WHERE id = ?";
+    await db.query(query, [company.nit, company.addressee_name, company.id]);
+    db.release();
 }
 
-const remove = (id) => {
-    const index = array.findIndex(company => company.companyId === id);
-
-    if(index != -1) {
-        array.splice(index, 1);
-    }
-}
-
-export default { create, read, searchById, edit, remove };
+export default { create, read, searchById, edit };

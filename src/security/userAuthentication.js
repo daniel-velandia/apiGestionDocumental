@@ -18,12 +18,11 @@ const createToken = (user) => {
 }
 
 const localStrategy = new LocalStrategy({usernameField: "username", passwordField: "password"},
-    (username, password, callback) => {
-
-        userService.read(username)
-        .then(async (user) => {
-
-            const samePassowrd = await bcrypt.compare(password, user.encryptedPassword);
+    async (username, password, callback) => {
+        try {
+            
+            const user = await userService.searchByUsername(username);
+            const samePassowrd = await bcrypt.compare(password, user.encrypted_password);
 
             if(!samePassowrd) {
                 callback(null, {error: "Contraseña incorrecta"});
@@ -31,11 +30,10 @@ const localStrategy = new LocalStrategy({usernameField: "username", passwordFiel
                 const token = createToken(user);
                 callback(null, new UserResponseModel(user), token);
             }
-            
-        })
-        .catch(error => {
+
+        } catch (error) {
             callback(null, {error: "No se encuentra el usuario"});
-        });
+        }
     }
 );
 

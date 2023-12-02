@@ -8,7 +8,7 @@ class UserRequestModel {
 
 class UserResponseModel {
     constructor(user) {
-        this.userId = user.userId;
+        this.userId = user.user_id;
         this.username = user.username;
         this.email = user.email;
     }

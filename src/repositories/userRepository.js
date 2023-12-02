@@ -1,19 +1,28 @@
-const array = [];
+import { connection } from "../db/connection.js"
 
-const create = (user) => {
-    array.push(user);
+const create = async (user) => {
+    const db = await connection.clientDB();
+    const query = "INSERT INTO users (user_id, username, email, encrypted_password) VALUES(?, ?, ?, ?)";
+    await db.query(query, [user.userId, user.username, user.email, user.encryptedPassword]);
+    db.release();
 }
 
-const searchByUsername = (username) => {
-    const user = array.find(user => user.username === username);
+const searchByUsername = async (username) => {
+    const db = await connection.clientDB();
+    const query = "SELECT * FROM users WHERE username = ?";
+    const [rows] = await db.query(query, [username]);
+    db.release();
 
-    return user ? user : null;
+    return rows[0] || null;
 }
 
-const searchByEmail = (email) => {
-    const user = array.find(user => user.email === email);
+const searchByEmail = async (email) => {
+    const db = await connection.clientDB();
+    const query = "SELECT * FROM users WHERE email = ?";
+    const [rows] = await db.query(query, [email]);
+    db.release();
 
-    return user ? user : null;
+    return rows[0] || null;
 }
 
 export default { create, searchByUsername, searchByEmail };

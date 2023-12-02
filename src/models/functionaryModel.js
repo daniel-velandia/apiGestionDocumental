@@ -5,16 +5,16 @@ class FunctionaryRequestModel {
         this.lastName = functionary.lastName;
         this.email = functionary.email;
         this.phone = functionary.phone;
-        this.dependence = functionary.dependence;
+        this.dependenceId = functionary.dependenceId;
     }
 }
 
 class FunctionaryResponseModel {
     constructor(functionary) {
-        this.functionaryId = functionary.functionaryId;
-        this.idCard = functionary.idCard;
+        this.entityId = functionary.entity_id;
+        this.idCard = functionary.id_card;
         this.name = functionary.name;
-        this.lastName = functionary.lastName;
+        this.lastName = functionary.last_name;
         this.email = functionary.email;
         this.phone = functionary.phone;
         this.dependence = functionary.dependence;

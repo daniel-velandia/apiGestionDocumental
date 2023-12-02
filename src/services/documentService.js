@@ -1,161 +1,120 @@
-import companyRepository from "../repositories/companyRepository.js";
+import documentReceivedDispatchedRepository from "../repositories/intermediaries/documentReceivedDispatchedRepository.js";
 import documentRepository from "../repositories/documentRepository.js";
-import externalPersonRepository from "../repositories/externalPersonRepository.js";
-import functionaryRepository from "../repositories/functionaryRepository.js";
-import studentRepository from "../repositories/studentRepository.js";
+import documentTypeRepository from "../repositories/others/documentTypeRepository.js";
+import fileRepository from "../repositories/file/fileRepository.js";
 import userRepository from "../repositories/userRepository.js";
+import entityService from "../services/parents/entityService.js";
 import crypto from "crypto";
+import { validateDocumentData, validateDocumentReceived, validateEntityExistence } from "../utils/validator.js";
+import { documentDataMapper } from "../utils/mapper.js";
 
-const fetchEntity = (typeEntity, id, reject) => {
-    let entity = {};
+const create = async (document, username) => {
+    validateDocumentData(document);
 
-    switch (typeEntity) {
-        case "student":
-            entity = studentRepository.searchById(id);
-            break;
-        case "company":
-            entity = companyRepository.searchById(id);
-            break;
-        case "externalPerson":
-            entity = externalPersonRepository.searchById(id);
-            break;
-        case "functionary":
-            entity = functionaryRepository.searchById(id);
-            break;
-        default:
-            reject("Error al asignar entidad")
-            return;
+    const user = await userRepository.searchByUsername(username);
+    const documentType = await documentTypeRepository.searchById(document.documentTypeId);
+    const documentReceived = await documentRepository.searchById(document.documentReceivedId, user.id);
+    const sender = await entityService.searchById(document.senderId, user.id);
+    const addressee = await entityService.searchById(document.addresseeId, user.id);
+
+    validateEntityExistence(sender, "Remitente no encontrado");
+    validateEntityExistence(addressee, "Destinatario no encontrado");
+    validateEntityExistence(documentType, "Tipo de documento incorrecto")
+    validateDocumentReceived(document.typeFile, documentReceived);
+    
+    document.documentId = crypto.randomUUID();
+    document.userId = user.id;
+    document.size = 23423;
+    document.documentTypeId = documentType.id;
+    document.senderId = sender.id;
+    document.addresseeId = addressee.id;
+
+    const fileId = await fileRepository.create(document.file);
+    await documentRepository.create(document, fileId);
+
+    if(!document.typeFile) {
+        const documentDispatched = await documentRepository.searchById(document.documentId, user.id);
+        await documentReceivedDispatchedRepository.create(documentReceived.id, documentDispatched.id);
     }
 
-    return entity;
+    return "documento creado con exito";
 }
 
-const create = (document, username) => {
-    return new Promise((resolve, reject) => {
-        if(!document.name || 
-           !document.fileNumber || 
-           !document.file || 
-           !document.documentType || 
-           !document.subject || 
-           !document.annexes || 
-           !document.senderType || 
-           !document.sender || 
-           !document.addresseeType || 
-           !document.addressee || 
-           (!document.typeFile && !document.documentReplied)) {
-
-            reject("datos incorrectos");
-            return;
-        }
-
-        const user = userRepository.searchByUsername(username);
-
-        document.documentId = crypto.randomUUID();
-        document.dateCreated = new Date();
-        document.size = document.file.size;
-        document.user = user;
-        document.sender = fetchEntity(document.senderType, document.sender, reject);
-        document.addressee = fetchEntity(document.addresseeType, document.addressee, reject);
-        document.documentReplied = !document.typeFile ? documentRepository.searchById(document.documentReplied) : null;
-
-        documentRepository.create(document);
-
-        resolve("documento creado con exito");
-    });
+const read = async (username) => {
+    const user = await userRepository.searchByUsername(username);
+    return await documentRepository.read(user.id);
 }
 
-const read = (username) => {
-    return new Promise((resolve, reject) => {
-        const user = userRepository.searchByUsername(username);
-        resolve(documentRepository.read(user.userId));
-    });
+const searchById = async (documentId, username) => {
+    const user = await userRepository.searchByUsername(username);
+    const document = await documentRepository.searchById(documentId, user.id);
+    validateEntityExistence(document, "Documento no encontrado");
+
+    document.sender = await entityService.searchEntityByType(document.sender_type, document.sender_id, document.created_date, user.id);
+    document.addressee = await entityService.searchEntityByType(document.addressee_type, document.addressee_id, document.created_date, user.id);
+    document.documentReceived = await documentRepository.searchById(document.received_id, user.id);
+
+    return document;
 }
 
-const detail = (id) => {
-    return new Promise((resolve, reject) => {
-        const document = documentRepository.searchById(id);
-        const user = userRepository.searchByUsername(username);
-
-        if(document.user.userId !== user.userId) {
-            reject("No se puede realizar esta acción");
-        } else {
-            resolve(document);
-        }
-    });
+const searchFile = async (documentId, username) => {
+    const user = await userRepository.searchByUsername(username);
+    const document = await documentRepository.searchById(documentId, user.id);
+    const file = await fileRepository.searchById(document.file_id);
+    
+    return file;
 }
 
-const edit = (id, document, username) => {
-    return new Promise((resolve, reject) => {
+const search = async (params, username) => {
+    const user = await userRepository.searchByUsername(username);
 
-        if(!document.name || 
-           !document.fileNumber || 
-           !document.file || 
-           !document.documentType || 
-           !document.subject || 
-           !document.annexes || 
-           !document.senderType || 
-           !document.sender || 
-           !document.addresseeType || 
-           !document.addressee || 
-           (!document.typeFile && !document.documentReplied)) {
- 
-            reject("datos incorrectos");
-            return;
-         }
+    const byIdCard = await documentRepository.searchByIdCard(params.query, user.id);
+    const byNit = await documentRepository.searchByNit(params.query, user.id);
 
-        const currentDocument = documentRepository.searchById(id);
-        const user = userRepository.searchByUsername(username);
+    const documents = byIdCard.length > 0 ? byIdCard : byNit;
 
-        if(currentDocument.user.userId !== user.userId) {
-            reject("No se puede realizar esta acción");
-            return;
-        }
-
-        currentDocument.name = document.name;
-        currentDocument.fileNumber = document.fileNumber;
-        currentDocument.typeFile = document.typeFile;
-        currentDocument.file = document.file;
-        currentDocument.size = document.file.size;
-        currentDocument.documentType = document.documentType;
-        currentDocument.subject = document.subject;
-        currentDocument.annexes = document.annexes;
-        currentDocument.requiresResponse = document.requiresResponse;
-        currentDocument.senderType = document.senderType;
-        currentDocument.sender = document.sender;
-        currentDocument.addresseeType = document.addresseeType;
-        currentDocument.addressee = document.addressee;
-        currentDocument.documentReplied = document.documentReplied;
-        currentDocument.informAddressee = document.informAddressee;
-        currentDocument.sender = fetchEntity(document.senderType, document.sender, reject);
-        currentDocument.addressee = fetchEntity(document.addresseeType, document.addressee, reject);
-        currentDocument.documentReplied = !document.typeFile ? documentRepository.searchById(document.documentReplied) : null;
-
-        const documentEdited = documentRepository.edit(currentDocument);
-
-        if(documentEdited !== null) {
-            resolve("documento actualizado con exito");
-        } else {
-            reject("Error al actualizar documento");
-        }
-
-    });
+    console.log(documents)
+    console.log(byIdCard)
+    console.log(byNit)
+    return documents;
 }
 
-const remove = (id, username) => {
-    return new Promise((resolve, reject) => {
-        
-        const document = documentRepository.searchById(id);
-        const user = userRepository.searchByUsername(username);
+const edit = async (documentId, document, username) => {
+    validateDocumentData(document);
 
-        if(document.user.userId !== user.userId) {
-            reject("No se puede realizar esta acción");
-            return;
-        }
+    const user = await userRepository.searchByUsername(username);
+    const documentType = await documentTypeRepository.searchById(document.documentTypeId);
+    const documentReceived = await documentRepository.searchById(document.documentReceivedId, user.id);
+    const currentDocument = await documentRepository.searchById(documentId, user.id);
+    const sender = await entityService.searchById(document.senderId, user.id);
+    const addressee = await entityService.searchById(document.addresseeId, user.id);
 
-        documentRepository.remove(document.documentId);
+    validateEntityExistence(sender, "Remitente no encontrado");
+    validateEntityExistence(addressee, "Destinatario no encontrado");
+    validateEntityExistence(documentType, "Tipo de documento incorrecto")
+    validateDocumentReceived(document.typeFile, documentReceived);
+    validateEntityExistence(currentDocument, "No se puede realizar esta acción");
+    documentDataMapper(currentDocument, document);
 
-        resolve();
-    });
+    await documentRepository.edit(currentDocument);
+    await fileRepository.edit(currentDocument.file, currentDocument.file_id);
+
+    if(!document.typeFile) {
+        await documentReceivedDispatchedRepository.edit(documentReceived.id, currentDocument.id);
+    } else {
+        await documentReceivedDispatchedRepository.edit(null, currentDocument.id);
+    }
+
+    return "documento creado con exito";
 }
 
-export default { create, read, detail, edit, remove };
+const remove = async (id, username) => {
+    const user = await userRepository.searchByUsername(username);
+    const document = await documentRepository.searchById(id, user.id);
+    validateEntityExistence(document, "No se puede realizar esta acción");
+
+    await documentReceivedDispatchedRepository.remove(document.document_dispatched_id)
+    await fileRepository.remove(document.file_id);
+}
+
+export default { create, read, searchById, searchFile, search, edit, remove };

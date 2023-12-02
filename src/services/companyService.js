@@ -1,104 +1,61 @@
 import companyRepository from "../repositories/companyRepository.js";
 import userRepository from "../repositories/userRepository.js";
+import entityTypeRepository from "../repositories/others/entityTypeRepository.js";
+import entityRepository from "../repositories/parents/entityRepository.js";
 import crypto from "crypto";
+import { entityTypes } from "../utils/constants.js";
+import { validateCompanyData, validateEntityExistence } from "../utils/validator.js";
+import { companyDataMapper } from "../utils/mapper.js";
 
-const create = (company, username) => {
-    return new Promise((resolve, reject) => {
+const create = async (company, username) => {
+    validateCompanyData(company);
 
-        if(!company.nit || 
-           !company.name || 
-           !company.email || 
-           !company.phone || 
-           !company.addresseeName) {
+    const user = await userRepository.searchByUsername(username);
+    
+    company.entityId = crypto.randomUUID();
+    company.userId = user.id;
 
-            reject("datos incorrectos");
-            return;
-        }
+    const entityType = await entityTypeRepository.searchByType(entityTypes[3])
+    const entityId = await entityRepository.create(company, entityType.id);
+    await companyRepository.create(company, entityId);
 
-        const user = userRepository.searchByUsername(username);
-
-        company.companyId = crypto.randomUUID();
-        company.user = user;
-
-        companyRepository.create(company);
-
-        resolve("Empresa creada con exito");
-    });
+    return "Empresa creada con exito";
 }
 
-const read = (username) => {
-    return new Promise((resolve, reject) => {
-        const user = userRepository.searchByUsername(username);
-        resolve(companyRepository.read(user.userId));
-    });
+const read = async (username) => {
+    const user = await userRepository.searchByUsername(username);
+    return await companyRepository.read(user.id);
 }
 
-const detail = (id, username) => {
-    return new Promise((resolve, reject) => {
-        const company = companyRepository.searchById(id);
-        const user = userRepository.searchByUsername(username);
+const searchById = async (entityId, username) => {
+    const user = await userRepository.searchByUsername(username);
+    const company = await companyRepository.searchById(entityId, user.id);
+    validateEntityExistence(company, "Empresa no encontrada");
 
-        if(company.user.userId !== user.userId) {
-            reject("No se puede realizar esta acción");
-        } else {
-            resolve(company);
-        }
-    });
+    return company;
 }
 
-const edit = (id, company, username) => {
-    return new Promise((resolve, reject) => {
+const edit = async (entityId, company, username) => {
+    validateCompanyData(company);
 
-        if(!company.nit || 
-           !company.name || 
-           !company.email || 
-           !company.phone || 
-           !company.addresseeName ) {
- 
-             reject("datos incorrectos");
-             return;
-        }
+    const user = await userRepository.searchByUsername(username);
+    const currentCompany = await companyRepository.searchById(entityId, user.id);
 
-        const currentCompany = companyRepository.searchById(id);
-        const user = userRepository.searchByUsername(username);
+    validateEntityExistence(currentCompany, "No se puede realizar esta acción");
+    companyDataMapper(currentCompany, company);
+    
+    await entityRepository.edit(currentCompany);
+    await companyRepository.edit(currentCompany);
 
-        if(currentCompany.user.userId !== user.userId) {
-            reject("No se puede realizar esta acción");
-            return;
-        }
-
-        currentCompany.nit = company.nit;
-        currentCompany.name = company.name;
-        currentCompany.email = company.email;
-        currentCompany.phone = company.phone;
-        currentCompany.adresseerName = company.adresseerName;
-
-        const companyEdited = companyRepository.edit(currentCompany);
-
-        if(companyEdited !== null) {
-            resolve("Empresa actualizada con exito");
-        } else {
-            reject("Error al actualizar empresa");
-        }
-
-    });
+    return "Empresa actualizada con exito";
 }
 
-const remove = (id, username) => {
-    return new Promise((resolve, reject) => {
-        
-        const company = companyRepository.searchById(id);
-        const user = userRepository.searchByUsername(username);
+const remove = async (entityId, username) => {
+    const user = await userRepository.searchByUsername(username);
+    const company = await companyRepository.searchById(entityId, user.id);
+    validateEntityExistence(company, "No se puede realizar esta acción");
 
-        if(company.user.userId !== user.userId) {
-            reject("No se puede realizar esta acción");
-            return;
-        }
-
-        companyRepository.remove(company.companyId);
-
-        resolve();
-    });
+    await entityRepository.remove(company.entity_id);
 }
 
-export default { create, read, detail, edit, remove };
+export default { create, read, searchById, edit, remove };

@@ -11,10 +11,10 @@ class ExternalPersonRequestModel {
 
 class ExternalPersonResponseModel {
     constructor(externalPerson) {
-        this.externalPersonId = externalPerson.externalPersonId;
-        this.idCard = externalPerson.idCard;
+        this.entityId = externalPerson.entity_id;
+        this.idCard = externalPerson.id_card;
         this.name = externalPerson.name;
-        this.lastName = externalPerson.lastName;
+        this.lastName = externalPerson.last_name;
         this.email = externalPerson.email;
         this.phone = externalPerson.phone;
         this.address = externalPerson.address;

@@ -2,30 +2,32 @@ import companyService from "../services/companyService.js";
 import { CompanyRequestModel, CompanyResponseModel } from "../models/companyModel.js";
 import responseHttp from "../utils/responseHttp.js";
 
-const create = (request, response) => {
+const create = async (request, response) => {
+    try {
 
-    if(!request.user.error) {
+        if(!request.user.error) {
 
-        companyService.create(new CompanyRequestModel(request.body), request.user.sub)
-        .then(message => {
+            const company = new CompanyRequestModel(request.body);
+            const message = await companyService.create(company, request.user.sub);
+
             responseHttp.success(response, message, 201);
-        })
-        .catch(error => {
-            responseHttp.error(response, "No es posible crear la empresa", error, 400);
-        });
 
-    } else {
-        responseHttp.error(response, "", request.user.error, 403);
+        } else {
+            responseHttp.error(response, "", request.user.error, 403);
+        }
+        
+    } catch (error) {
+        responseHttp.error(response, "No es posible crear la empresa", error, 400);
     }
 }
 
-const read = (request, response) => {
+const read = async (request, response) => {
+    try {
 
-    if(!request.user.error) {
+        if(!request.user.error) {
 
-        companyService.read(request.user.sub)
-        .then(array => {
-    
+            const array = await companyService.read(request.user.sub)
+
             const companies = [];
     
             array.forEach(company => {
@@ -33,65 +35,68 @@ const read = (request, response) => {
             });
     
             responseHttp.success(response, companies, 200);
-        })
-        .catch(error => {
-            responseHttp.error(response, "No es posible leer las empresas", error, 500);
-        });
 
-    } else {
-        responseHttp.error(response, "", request.user.error, 403);
+        } else {
+            responseHttp.error(response, "", request.user.error, 403);
+        }
+        
+    } catch (error) {
+        responseHttp.error(response, "No es posible leer las empresas", error, 500);
     }
 }
 
-const detail = (request, response) => {
+const searchById = async (request, response) => {
+    try {
 
-    if(!request.user.error) {
+        if(!request.user.error) {
 
-        companyService.detail(request.params.id, request.user.sub)
-        .then(company => {
+            const company = await companyService.searchById(request.params.id, request.user.sub);
+
             responseHttp.success(response, new CompanyResponseModel(company), 200);
-        })
-        .catch(error => {
-            responseHttp.error(response, "Error al leer la empresa", error, 500);
-        });
 
-    } else {
-        responseHttp.error(response, "", request.user.error, 403);
+        } else {
+            responseHttp.error(response, "", request.user.error, 403);
+        }
+        
+    } catch (error) {
+        responseHttp.error(response, "No es posible leer la empresa", error, 400);
     }
 }
 
-const edit = (request, response) => {
+const edit = async (request, response) => {
+    try {
 
-    if(!request.user.error) {
+        if(!request.user.error) {
 
-        companyService.edit(request.params.id, new CompanyRequestModel(request.body), request.user.sub)
-        .then(message => {
+            const company = new CompanyRequestModel(request.body);
+            const message = await companyService.edit(request.params.id, company, request.user.sub);
+
             responseHttp.success(response, message, 200);
-        })
-        .catch(error => {
-            responseHttp.error(response, "Error al actualizar la empresa", error, 400);
-        });
 
-    } else {
-        responseHttp.error(response, "", request.user.error, 403);
+        } else {
+            responseHttp.error(response, "", request.user.error, 403);
+        }
+        
+    } catch (error) {
+        responseHttp.error(response, "No es posible actualizar la empresa", error, 400);
     }
 }
 
-const remove = (request, response) => {
-    
-    if(!request.user.error) {
+const remove = async (request, response) => {
+    try {
 
-        companyService.remove(request.params.id, request.user.sub)
-        .then(() => {
-            responseHttp.success(response, "Empresa eliminada con exito", 200);
-        })
-        .catch(error => {
-            responseHttp.error(response, "Error al eliminar la empresa", error, 400);
-        });
+        if(!request.user.error) {
 
-    } else {
-        responseHttp.error(response, "", request.user.error, 403);
+            await companyService.remove(request.params.id, request.user.sub);
+            responseHttp.success(response, "", 200);
+
+        } else {
+            responseHttp.error(response, "", request.user.error, 403);
+        }
+        
+    } catch (error) {
+        responseHttp.error(response, "No es posible eliminar la empresa", error, 400);
     }
 }
 
-export default { create, read, detail, edit, remove };
+export default { create, read, searchById, edit, remove };

@@ -1,51 +1,41 @@
 import userRepository from "../repositories/userRepository.js";
 import crypto from "crypto";
 import bcrypt from "bcrypt";
+import { validateEntityExistence, validateUserData } from "../utils/validator.js";
 
-const create = (user) => {
-    return new Promise((resolve, reject) => {
+const checkDuplicateEmail = async (email) => {
+    const user = await userRepository.searchByEmail(email);
+    if (user) {
+        throw new Error("El correo ya se encuentra registrado");
+    }
+};
 
-        if(!user.username || 
-           !user.email || 
-           !user.password) {
+const checkDuplicateUsername = async (username) => {
+    const user = await userRepository.searchByUsername(username);
+    if (user) {
+        throw new Error("El nombre de usuario ya se encuentra registrado");
+    }
+};
 
-            reject("Datos incorrectos");
-            return;
-        }
+const create = async (user) => {
+    validateUserData(user);
 
-        if(userRepository.searchByEmail(user.email) !== null) {
-            reject("El correo ya se encuentra registrado");
-            return;
-        }
+    await checkDuplicateEmail(user.email);
+    await checkDuplicateUsername(user.username);
 
-        if(userRepository.searchByUsername(user.username) !== null) {
-            reject("El nombre de usuario ya se encuentra registrado");
-            return;
-        }
+    user.userId = crypto.randomUUID();
+    user.encryptedPassword = bcrypt.hashSync(user.password, 10);
 
-        user.userId = crypto.randomUUID();
-        user.encryptedPassword = bcrypt.hashSync(user.password, 10);
+    await userRepository.create(user);
 
-        userRepository.create(user);
-
-        resolve("Usuario creado con exito");
-
-    });
+    return "Usuario creado con exito";
 }
 
-const read = (username) => {
-    return new Promise((resolve, reject) => {
+const searchByUsername = async (username) => {
+    const user = await userRepository.searchByUsername(username);
+    validateEntityExistence(user, "Usuario no encontrado")
 
-        const user = userRepository.searchByUsername(username);
-
-        if(user === null) {
-            reject("Usuario no encontrado");
-            return;
-        }
-
-        resolve(user);
-
-    });
+    return user;
 }
 
-export default { create, read };
+export default { create, searchByUsername };

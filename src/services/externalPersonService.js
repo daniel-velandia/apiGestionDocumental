@@ -1,107 +1,65 @@
+import entityRepository from "../repositories/parents/entityRepository.js";
+import entityTypeRepository from "../repositories/others/entityTypeRepository.js";
+import personRepository from "../repositories/parents/personRepository.js";
 import externalPersonRepository from "../repositories/externalPersonRepository.js";
 import userRepository from "../repositories/userRepository.js";
 import crypto from "crypto";
+import { entityTypes } from "../utils/constants.js";
+import { validateEntityExistence, validateExternalPersonData } from "../utils/validator.js";
+import { externalPersonDataMapper } from "../utils/mapper.js";
 
-const create = (externalPerson, username) => {
-    return new Promise((resolve, reject) => {
+const create = async (externalPerson, username) => {
+    validateExternalPersonData(externalPerson);
 
-        if(!externalPerson.idCard || 
-           !externalPerson.name || 
-           !externalPerson.lastName || 
-           !externalPerson.email || 
-           !externalPerson.phone || 
-           !externalPerson.address) {
+    const user = await userRepository.searchByUsername(username);
 
-            reject("datos incorrectos");
-            return;
-        }
+    externalPerson.entityId = crypto.randomUUID();
+    externalPerson.userId = user.id;
 
-        const user = userRepository.searchByUsername(username);
+    const entityType = await entityTypeRepository.searchByType(entityTypes[2]);
+    const entityId = await entityRepository.create(externalPerson, entityType.id);
+    const personId = await personRepository.create(externalPerson);
+    await externalPersonRepository.create(externalPerson.address, entityId, personId);
 
-        externalPerson.externalPersonId = crypto.randomUUID();
-        externalPerson.user = user;
+    return "Persona externa creada con éxito";
+};
 
-        externalPersonRepository.create(externalPerson);
+const read = async (username) => {
+    const user = await userRepository.searchByUsername(username);
+    return await externalPersonRepository.read(user.id);
+};
 
-        resolve("Persona externa creada con exito");
-    });
-}
+const searchById = async (entityId, username) => {
+    const user = await userRepository.searchByUsername(username);
+    const externalPerson = await externalPersonRepository.searchById(entityId, user.id);
+    validateEntityExistence(externalPerson, "Persona externa no encontrada");
 
-const read = (username) => {
-    return new Promise((resolve, reject) => {
-        const user = userRepository.searchByUsername(username);
-        resolve(externalPersonRepository.read(user.userId));
-    });
-}
+    return externalPerson;
+};
 
-const detail = (id, username) => {
-    return new Promise((resolve, reject) => {
-        const externalPerson = externalPersonRepository.searchById(id);
-        const user = userRepository.searchByUsername(username);
+const edit = async (entityId, externalPerson, username) => {
+    validateExternalPersonData(externalPerson);
 
-        if(externalPerson.user.userId !== user.userId) {
-            reject("No se puede realizar esta acción");
-        } else {
-            resolve(externalPerson);
-        }
-    });
-}
+    const user = await userRepository.searchByUsername(username);
+    const currentExternalPerson = await externalPersonRepository.searchById(entityId, user.id);
 
-const edit = (id, externalPerson, username) => {
-    return new Promise((resolve, reject) => {
+    validateEntityExistence(currentExternalPerson, "No se puede realizar esta acción");
+    externalPersonDataMapper(currentExternalPerson, externalPerson);
 
-        if(!externalPerson.idCard || 
-           !externalPerson.name || 
-           !externalPerson.lastName || 
-           !externalPerson.email || 
-           !externalPerson.phone || 
-           !externalPerson.address) {
- 
-            reject("datos incorrectos");
-            return;
-        }
+    await entityRepository.edit(currentExternalPerson);
+    await personRepository.edit(currentExternalPerson);
+    await externalPersonRepository.edit(currentExternalPerson);
 
-        const currentExternalPerson = externalPersonRepository.searchById(id);
-        const user = userRepository.searchByUsername(username);
+    return "Persona externa actualizada con éxito";
+};
 
-        if(currentExternalPerson.user.userId !== user.userId) {
-            reject("No se puede realizar esta acción");
-            return;
-        }
+const remove = async (externalPersonId, username) => {
+    const user = await userRepository.searchByUsername(username);
+    const externalPerson = await externalPersonRepository.searchById(externalPersonId, user.id);
+    validateEntityExistence(externalPerson, "No se puede realizar esta acción");
 
-        currentExternalPerson.idCard = externalPerson.idCard;
-        currentExternalPerson.name = externalPerson.name;
-        currentExternalPerson.lastName = externalPerson.lastName;
-        currentExternalPerson.email = externalPerson.email;
-        currentExternalPerson.phone = externalPerson.phone;
-        currentExternalPerson.address = externalPerson.address;
+    await entityRepository.remove(externalPerson.entity_id);
+    await personRepository.remove(externalPerson.person_id);
+};
 
-        const externalPersonEdited = externalPersonRepository.edit(currentExternalPerson);
-
-        if(externalPersonEdited !== null) {
-            resolve("Persona externa actualizada con exito");
-        } else {
-            reject("Error al actualizar persona externa");
-        }
-
-    });
-}
-
-const remove = (id, username) => {
-    return new Promise((resolve, reject) => {
-        
-        const externalPerson = externalPersonRepository.searchById(id);
-        const user = userRepository.searchByUsername(username);
-
-        if(externalPerson.user.userId !== user.userId) {
-            reject("No se puede realizar esta acción");
-            return;
-        }
-
-        externalPersonRepository.remove(externalPerson.externalPersonId);
-
-        resolve();
-    });
-}
-
-export default { create, read, detail, edit, remove };
+export default { create, read, searchById, edit, remove };
