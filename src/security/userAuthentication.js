@@ -1,10 +1,10 @@
 import LocalStrategy from "passport-local";
-import userService from "../services/userService.js";
+import userService from "../services/user/userService.js";
 import bcrypt from "bcrypt";
 import securityConstants from "./securityConstants.js";
 import jwt from "jsonwebtoken";
 import { variables } from "../utils/variables.js";
-import { UserResponseModel } from "../models/UserModel.js";
+import { UserEntityModel, UserResModel } from "../models/user/userModel.js";
 
 const createToken = (user) => {
 
@@ -20,15 +20,14 @@ const createToken = (user) => {
 const localStrategy = new LocalStrategy({usernameField: "username", passwordField: "password"},
     async (username, password, callback) => {
         try {
-            
             const user = await userService.searchByUsername(username);
-            const samePassowrd = await bcrypt.compare(password, user.encrypted_password);
+            const samePassowrd = await bcrypt.compare(password, user.encryptedPassword);
 
             if(!samePassowrd) {
                 callback(null, {error: "Contraseña incorrecta"});
             } else {
                 const token = createToken(user);
-                callback(null, new UserResponseModel(user), token);
+                callback(null, new UserResModel(user), token);
             }
 
         } catch (error) {

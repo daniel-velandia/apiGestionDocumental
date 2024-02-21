@@ -1,43 +1,42 @@
-export const entityTypes = [
-    "estudiante",
-    "funcionario",
-    "persona externa",
-    "empresa",
-];
-  
-export const careers = [
-    "Diseño gráfico",
-    "Administración de empresas",
-    "Hotelería y turismo",
-    "Ingeniería de software",
-    "Negocios internacionales",
-    "Administración financiera",
-    "Negocios internacionales distancia",
-    "Gestión logística empresarial",
-];
-  
-export const dependences = [
-    "Rectoria",
-    "Financiera",
-    "Bienestar",
-    "Secretaria general",
-    "Aseguramiento",
-    "Infraestructura",
-    "Educación superior",
-    "Calidad",
-    "Mercadeo",
-    "Comunicaciones",
-    "Investigaciones",
-    "Gestión humana",
-    "Registro y control",
-    "Gestión tecnológica",
-    "Compras",
-    "Gestión documental",
-];
-  
-export const documentTypes = [
-    "Cartas",
-    "Cuentas",
-    "Solicitudes de estudiantes",
-];
-  
+export const interlocutorTypes = {
+    student: "estudiante",
+    functionary: "funcionario",
+    externalPerson: "persona externa",
+    company: "empresa",
+};
+
+export const careers = {
+    graphicDesign: "Diseño gráfico",
+    businessAdministration: "Administración de empresas",
+    tourism: "Hotelería y turismo",
+    softwareEngineering: "Ingeniería de software",
+    internationalBusiness: "Negocios internacionales",
+    financialManagement: "Administración financiera",
+    internationalBusinessDistance: "Negocios internacionales distancia",
+    businessLogisticsManagement: "Gestión logística empresarial",
+};
+
+export const dependences = {
+    rectorate: "Rectoria",
+    financial: "Financiera",
+    welfare: "Bienestar",
+    generalSecretary: "Secretaria general",
+    assurance: "Aseguramiento",
+    infrastructure: "Infraestructura",
+    higherEducation: "Educación superior",
+    quality: "Calidad",
+    marketing: "Mercadeo",
+    communications: "Comunicaciones",
+    research: "Investigaciones",
+    humanResources: "Gestión humana",
+    registryAndControl: "Registro y control",
+    technologicalManagement: "Gestión tecnológica",
+    purchases: "Compras",
+    documentManagement: "Gestión documental",
+};
+
+export const documentTypes = {
+    letters: "Cartas",
+    invoices: "Cuentas",
+    studentRequests: "Solicitudes de estudiantes",
+};

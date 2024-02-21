@@ -2,10 +2,10 @@ import express from "express";
 import { securityConfiguration } from "./security/securityConfiguration.js";
 import { variables } from "./utils/variables.js";
 import { connection } from "./db/connection.js";
-import careerService from "./services/others/careerService.js";
-import entityTypeService from "./services/others/entityTypeService.js";
-import dependenceService from "./services/others/dependenceService.js";
-import documentTypeService from "./services/others/documentTypeService.js";
+import careerService from "./services/data/careerService.js";
+import interlocutorTypeService from "./services/data/interlocutorTypeService.js";
+import dependenceService from "./services/data/dependenceService.js";
+import documentTypeService from "./services/data/documentTypeService.js";
 
 const app = express();
 
@@ -23,7 +23,7 @@ connection.clientDB()
     });
 
     careerService.create();
-    entityTypeService.create();
+    interlocutorTypeService.create();
     dependenceService.create();
     documentTypeService.create();
 })
